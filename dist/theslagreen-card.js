@@ -92,7 +92,7 @@ const DEFAULT_ENTITIES = {
   bypass: 'switch.rekuperator_bypass',
   bypass_actuator: 'binary_sensor.rekuperator_silownik_bypassu',
   winter: 'switch.rekuperator_zima',
-  manual_speed: 'sensor.rekuperator_speedmanual',
+  manual_speed: 'number.rekuperator_intensywnosc_manualna',
   special_mode: 'sensor.rekuperator_specjalny_tryb_pracy',
   filter_change: 'sensor.rekuperator_wymiana_filtrow',
   fpx_mode: 'sensor.rekuperator_fpx_tryb',
