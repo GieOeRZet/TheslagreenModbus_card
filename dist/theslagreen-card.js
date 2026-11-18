@@ -1,6 +1,6 @@
-/*! theslagreen-card v0.2.0 – karta rekuperatora Thessla Green AirPack4h dla Home Assistant */
+/*! theslagreen-card v0.2.1 – karta rekuperatora Thessla Green AirPack4h dla Home Assistant */
 (() => {
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const BASE = (() => { try { return new URL('.', import.meta.url).href; } catch (e) { return '/local/community/theslagreen-card/'; } })();
 
 /* ------------------------------------------------------------------ geometria */
@@ -147,8 +147,8 @@ class TheslaGreenCard extends HTMLElement {
   static getConfigElement() { return document.createElement('theslagreen-card-editor'); }
   static getStubConfig() { return { type: 'custom:theslagreen-card', theme: 'auto' }; }
   setConfig(c) { this._cfg = normalize(c); this._imgState = {}; this._sig = null; this._popup = null; if (this._hass) this._render(); }
-  getCardSize() { return 8; }
-  getGridOptions() { return { columns: 12, rows: 8, min_columns: 6, min_rows: 4 }; }
+  getCardSize() { return 6; }
+  getGridOptions() { return { columns: 12, rows: 'auto', min_columns: 6 }; }
   set hass(h) {
     this._hass = h;
     if (!this._cfg || this._drag) return;
@@ -354,7 +354,7 @@ ${bypassOpen ? `<mask id="em" maskUnits="userSpaceOnUse" x="-100" y="100" width=
     const fpx = this._st('fpx_mode'); const fpxOn = fpx && isFinite(parseFloat(fpx.state)) && parseFloat(fpx.state) !== 0;
     const pwr = this._num('power');
     const chip = (x, y, w, lab, val, id) => `<g data-act="more" data-v="${esc(id || '')}"><rect x="${x}" y="${y}" width="${w}" height="54" rx="14" fill="${t.panel}" stroke="${t.pstroke}" stroke-width="1.2"${pan}/><text x="${x + 14}" y="${y + 21}" font-size="9.5" font-weight="700" letter-spacing="1" fill="${t.muted}">${lab}</text><text x="${x + 14}" y="${y + 43}" font-size="17" font-weight="700" fill="${t.text}">${val}</text></g>`;
-    s += chip(-166, 318, 140, 'NAGRZEWNICA FPX', fpx ? (fpxOn ? 'aktywna' : 'wyłączona') : '–', E.fpx_mode);
+    s += chip(-166, 318, 140, 'NAGRZEWNICA', fpx ? (fpxOn ? 'aktywna' : 'wyłączona') : '–', E.fpx_mode);
     s += chip(840, 318, 136, 'POBÓR MOCY', isFinite(pwr) ? Math.round(pwr) + ' ' + (this._unit('power') || 'W') : '–', E.power);
     /* dół: odzysk dziś, stan */
     const faults = (Array.isArray(E.faults) ? E.faults : []).filter(id => { const st = this._hass.states[id]; const v = st && parseFloat(st.state); return isFinite(v) && v !== 0; });
@@ -425,7 +425,8 @@ ${bypassOpen ? `<mask id="em" maskUnits="userSpaceOnUse" x="-100" y="100" width=
       });
       s += '</g>';
     }
-    return s + '</svg>';
+    const k = (this._cfg.font_scale > 0 ? this._cfg.font_scale : 1.2);
+    return (s + '</svg>').replace(/font-size="([\d.]+)"/g, (m, v) => `font-size="${(parseFloat(v) < 13 ? parseFloat(v) * k : parseFloat(v)).toFixed(1)}"`);
   }
 }
 const SX = -90, SW = 650;

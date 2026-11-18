@@ -47,6 +47,7 @@ Przystanki: minimum 2, temperatura w °C, kolor hex. Kolor jest interpolowany li
 |---|---|---|
 | `theme` | `auto` | `auto` (wg motywu HA), `light`, `dark` |
 | `flow_opacity` | `0.5` | przezroczystość pasm rur (0–1) |
+| `font_scale` | `1.2` | skala małych napisów (etykiety), większe wartości bez zmian |
 | `bypass_duct` | `true` | `false` ukrywa blady kanał bypassu, gdy jest zamknięty |
 | `images.enabled` | `auto` | `auto` (zdjęcia, gdy pliki istnieją), `true`, `false` (zawsze wektor) |
 | `images.path` | folder karty | adres folderu ze zdjęciami |
@@ -99,4 +100,4 @@ Intensywność ręczna: suwak działa, gdy `manual_speed` to `number` lub `input
 
 ## Status
 
-Wersja wczesna (0.2.0). Domyślne nazwy encji pochodzą z poprzedniej instalacji i mogą wymagać dopasowania do Twojej integracji.
+Wersja wczesna (0.2.1). Domyślne nazwy encji pochodzą z poprzedniej instalacji i mogą wymagać dopasowania do Twojej integracji.
