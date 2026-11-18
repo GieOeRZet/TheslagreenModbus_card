@@ -11,7 +11,7 @@ Karta Lovelace dla rekuperatora **Thessla Green AirPack4h** (integracja Modbus).
 
 ## Instalacja przez HACS
 
-1. HACS → menu (⋮) → **Custom repositories** → adres `https://github.com/GieOeRZet/TheslagreenModub_card`, kategoria **Dashboard**.
+1. HACS → menu (⋮) → **Custom repositories** → adres `https://github.com/GieOeRZet/TheslagreenModbus_card`, kategoria **Dashboard**.
 2. Zainstaluj **Thessla Green Card**, odśwież przeglądarkę (Ctrl+F5).
 3. Zasób (`theslagreen-card.js`, typ *JavaScript Module*) HACS dodaje sam.
 
