@@ -1,10 +1,10 @@
-/*! theslagreen-card v0.2.1 – karta rekuperatora Thessla Green AirPack4h dla Home Assistant */
+/*! theslagreen-card v0.3.0 – karta rekuperatora Thessla Green AirPack4h dla Home Assistant */
 (() => {
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 const BASE = (() => { try { return new URL('.', import.meta.url).href; } catch (e) { return '/local/community/theslagreen-card/'; } })();
 
 /* ------------------------------------------------------------------ geometria */
-const X0 = -175, Y0 = 95, W = 1153, H = 700, YT = 226, YB = 473;
+const X0 = -175, Y0 = 95, W = 1153, H = 480, YT = 226, YB = 473;
 const FILT_L = 'M150.6 339.9 L154.5 339.2 L157.5 338.1 L160.0 336.6 L162.6 334.1 L164.1 332.2 L165.6 329.5 L167.3 322.5 L174.3 278.5 L175.4 270.5 L175.6 266.5 L177.4 255.5 L177.6 250.5 L178.4 246.5 L178.6 242.5 L179.4 238.5 L179.6 233.5 L180.4 229.5 L180.6 223.5 L181.4 219.5 L181.6 212.5 L182.4 208.5 L182.6 202.5 L183.4 198.5 L183.6 189.5 L184.4 185.5 L184.4 173.5 L183.6 170.5 L181.1 166.4 L177.0 162.4 L172.5 160.3 L162.5 158.6 L158.5 158.4 L154.5 157.6 L149.5 157.4 L138.5 155.6 L134.5 155.4 L130.5 154.6 L125.5 154.4 L121.5 153.6 L113.5 153.5 L110.5 154.0 L106.0 156.4 L103.7 158.0 L102.4 159.5 L99.9 163.5 L98.8 166.5 L96.4 181.5 L94.7 189.5 L89.6 224.5 L89.4 228.5 L86.6 248.5 L86.4 253.5 L84.6 265.5 L84.5 271.5 L83.6 276.5 L83.4 282.5 L82.6 286.5 L82.5 293.5 L81.6 298.5 L81.5 304.5 L80.5 311.5 L80.7 319.5 L81.6 322.5 L82.9 325.2 L87.4 330.1 L93.3 333.9 Z';
 const FILT_R = 'M709.7 333.9 L715.6 330.1 L720.1 325.2 L721.4 322.5 L722.3 319.5 L722.5 314.5 L722.4 311.5 L721.5 306.5 L721.4 300.5 L720.5 295.5 L720.4 287.5 L719.6 283.5 L719.4 277.5 L718.6 273.5 L718.4 267.5 L717.6 263.5 L717.4 258.5 L716.6 254.5 L716.4 249.5 L715.6 245.5 L713.4 225.5 L709.3 196.5 L704.3 167.5 L703.4 164.5 L702.1 161.8 L697.6 156.9 L693.5 154.4 L690.5 153.6 L682.5 153.5 L669.5 155.4 L665.5 155.6 L661.5 156.4 L657.5 156.6 L653.5 157.4 L649.5 157.6 L645.5 158.4 L640.5 158.6 L631.5 160.0 L627.6 161.4 L624.9 163.4 L620.9 167.8 L618.8 172.5 L618.5 185.5 L619.5 191.5 L619.5 198.5 L620.5 204.5 L620.6 210.5 L621.4 214.5 L621.6 220.5 L622.5 225.5 L622.6 230.5 L624.4 242.5 L625.6 256.5 L628.4 274.5 L628.7 279.5 L636.0 324.5 L637.0 328.5 L638.4 331.4 L639.9 333.6 L643.0 336.6 Z';
 const HEX = '333,232 457,237 530,372 462,492 358,495 262,350';
@@ -143,6 +143,8 @@ class TheslaGreenCard extends HTMLElement {
     this._popup = null; this._sig = null; this._drag = null;
     this.shadowRoot.addEventListener('click', e => this._click(e));
     this.shadowRoot.addEventListener('pointerdown', e => this._down(e));
+    this.shadowRoot.addEventListener('input', e => this._input(e));
+    this.shadowRoot.addEventListener('change', e => this._change(e));
   }
   static getConfigElement() { return document.createElement('theslagreen-card-editor'); }
   static getStubConfig() { return { type: 'custom:theslagreen-card', theme: 'auto' }; }
@@ -197,26 +199,17 @@ class TheslaGreenCard extends HTMLElement {
   _click(e) {
     const t = e.target.closest('[data-act]'); if (!t) return;
     const a = t.getAttribute('data-act'), v = t.getAttribute('data-v');
+    if (a === 'close' && t.classList.contains('ov') && e.target !== t) return;
     if (a === 'toggle') this._toggle(v);
     else if (a === 'season') this._setBool('winter', v === 'zima');
     else if (a === 'more') this._more(v);
-    else if (a === 'popup') { this._popup = this._popup === v ? null : v; this._sig = null; this._render(); }
+    else if (a === 'popup' || a === 'tab') { this._popup = v; this._sig = null; this._render(); }
     else if (a === 'close') { this._popup = null; this._sig = null; this._render(); }
     else if (a === 'mode') this._runMode(this._cfg.special_modes[parseInt(v, 10)]);
   }
-  _down(e) {
-    const t = e.target.closest('[data-act="slider"]'); if (!t || !this._speedWritable()) return;
-    const svg = this.shadowRoot.querySelector('svg'); const pt = svg.createSVGPoint();
-    const calc = ev => { pt.x = ev.clientX; pt.y = ev.clientY; const p = pt.matrixTransform(svg.getScreenCTM().inverse()); return Math.max(0, Math.min(100, Math.round((p.x - SX) / SW * 100))); };
-    this._drag = true; let v = calc(e);
-    const upd = () => { const f = this.shadowRoot.getElementById('sl-fill'), k = this.shadowRoot.getElementById('sl-knob'), tx = this.shadowRoot.getElementById('sl-val');
-      if (f) f.setAttribute('width', SW * v / 100); if (k) k.setAttribute('cx', SX + SW * v / 100); if (tx) tx.firstChild.nodeValue = v; };
-    upd();
-    const mv = ev => { v = calc(ev); upd(); };
-    const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); this._drag = null; this._setSpeed(v); this._sig = null; };
-    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
-    e.preventDefault();
-  }
+  _down(e) { if (e.target.closest && e.target.closest('input[type=range]')) this._drag = true; }
+  _input(e) { const r = e.target; if (!r || r.type !== 'range') return; const o = this.shadowRoot.getElementById('sl-val'); if (o) o.textContent = r.value; const f = this.shadowRoot.getElementById('sl-fill'); if (f) f.style.width = r.value + '%'; }
+  _change(e) { const r = e.target; if (!r || r.type !== 'range') return; this._setSpeed(parseInt(r.value, 10)); this._drag = null; this._sig = null; }
 
   /* ---------- render ---------- */
   _render() {
@@ -226,11 +219,92 @@ class TheslaGreenCard extends HTMLElement {
       :host{display:block}
       ha-card{overflow:hidden;background:${t.bg2};border-radius:var(--ha-card-border-radius,14px)}
       svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none;touch-action:pan-y}
-      [data-act]{cursor:pointer} [data-act="slider"]{cursor:ew-resize;touch-action:none}
+      [data-act]{cursor:pointer}
       text{font-family:${FONT}}
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
       .alarm{animation:pulse 1.4s infinite}
-    </style><ha-card>${this._svg(t, dark)}</ha-card>`;
+      .ui,.ov{font-family:${FONT};color:${t.text}}
+      .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:8px 10px 12px}
+      .tile{display:flex;align-items:center;gap:10px;background:${t.panel};border:1px solid ${t.pstroke};border-radius:14px;padding:9px 12px;min-width:0}
+      .tile .ic{flex:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${t.on}}
+      .tile .ic svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+      .tile small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.7px;color:${t.muted};text-transform:uppercase}
+      .tile b{display:block;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tile.bad{grid-column:1/-1;border-color:#e5484d;background:#e5484d22}.tile.bad b,.tile.bad small{color:#e5484d}
+      .ov{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box}
+      .pn{background:${t.panel};border:1px solid ${t.pstroke};border-radius:22px;width:100%;max-width:520px;max-height:92vh;overflow:auto;padding:18px 22px 22px;box-sizing:border-box;box-shadow:0 12px 40px #0006}
+      .hd{display:flex;align-items:center;justify-content:space-between}.hd h2{margin:0;font-size:20px}
+      .x{cursor:pointer;font-size:26px;line-height:1;padding:4px 8px;color:${t.muted}}
+      .tabs{display:flex;gap:22px;border-bottom:1px solid ${t.pstroke};margin:8px 0 16px}
+      .tabs span{cursor:pointer;padding:8px 2px;font-weight:700;font-size:15px;color:${t.muted};border-bottom:3px solid transparent;margin-bottom:-1px}
+      .tabs span.on{color:${t.on};border-color:${t.on}}
+      .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+      .tg{cursor:pointer;display:flex;align-items:center;gap:10px;min-height:50px;box-sizing:border-box;padding:0 14px;border-radius:14px;border:1.2px solid ${t.pstroke};background:${t.panel};font-size:16px;font-weight:700}
+      .tg i{flex:none;width:14px;height:14px;border-radius:50%;border:2px solid ${t.muted};box-sizing:border-box}
+      .tg.on{border-width:2px}.tg.on i{border:0}
+      .seg{display:flex;background:${t.bg2};border-radius:14px;padding:4px;min-height:50px;box-sizing:border-box}
+      .seg span{flex:1;display:flex;align-items:center;justify-content:center;border-radius:11px;cursor:pointer;font-weight:700;font-size:15px;color:${t.muted}}
+      .seg span.on{background:${t.on};color:#fff}
+      .lb{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 8px;font-size:12px;font-weight:700;letter-spacing:1px;color:${t.muted}}
+      .lb b{font-size:24px;color:${t.text};letter-spacing:0}.lb b small{font-size:14px;color:${t.muted}}
+      input[type=range]{width:100%;height:34px;accent-color:${t.on};margin:0}
+      input[type=range]:disabled{opacity:.45}
+      .md{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .md div{cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:${t.bg2};font-weight:700;font-size:16px;text-align:center;padding:0 8px;box-sizing:border-box}
+      .md div.on{background:${t.on};color:#fff}
+      .st{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+      .st div{cursor:pointer;background:${t.bg2};border-radius:12px;padding:10px 12px}
+      .st small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.8px;color:${t.muted}}
+      .st b{font-size:22px;font-weight:700}.st b span{font-size:13px;color:${t.muted};font-weight:600}
+    </style><ha-card>${this._svg(t, dark)}<div class="ui">${this._strip()}</div>${this._popupHtml()}</ha-card>`;
+  }
+  /* wspólne odczyty dla paska i popupu */
+  _info() {
+    const c = this._cfg, E = c.entities;
+    const on = this._st('on_off') ? this._on('on_off') : true;
+    const auto = this._on('mode'), bypassSw = this._on('bypass'), winter = this._on('winter');
+    const sv = this._num('manual_speed'), wr = this._speedWritable();
+    const modes = c.special_modes, sm = this._st('special_mode');
+    const cur = modes.find(m => m.value !== undefined && sm && String(m.value) === String(parseFloat(sm.state))) || modes.find(m => m.value !== undefined && sm && String(m.value) === sm.state);
+    const faults = (Array.isArray(E.faults) ? E.faults : []).filter(id => { const st = this._hass.states[id]; const v = st && parseFloat(st.state); return isFinite(v) && v !== 0; });
+    return { E, on, auto, bypassSw, winter, sv, wr, modes, cur, faults };
+  }
+  _strip() {
+    const { on, auto, sv, cur, winter, faults, E } = this._info();
+    const special = cur && String(cur.value) !== '0' ? cur.name : null;
+    const mode = !on ? 'Wyłączony' : (special || (auto ? 'AUTO' : 'Ręczny')) + (isFinite(sv) && !special ? ' · ' + Math.round(sv) + '%' : '');
+    const ic = { mode: '<svg viewBox="-12 -12 24 24"><path d="M-10 6 L-4 -6 L2 2 L10 -10"/></svg>',
+      sun: '<svg viewBox="-12 -12 24 24"><circle r="4.5"/><path d="M0 -11v3M0 8v3M-11 0h3M8 0h3M-8 -8l2 2M6 6l2 2M-8 8l2 -2M6 -6l2 -2"/></svg>',
+      flake: '<svg viewBox="-12 -12 24 24"><path d="M0 -11V11M-9.5 -5.5L9.5 5.5M-9.5 5.5L9.5 -5.5"/></svg>',
+      warn: '<svg viewBox="-12 -12 24 24"><path d="M0 -9V2M0 8v.5"/></svg>' };
+    let h = `<div class="strip"><div class="tile" data-act="popup" data-v="sterowanie"><span class="ic">${ic.mode}</span><span><small>Tryb</small><b>${esc(mode)}</b></span></div>`;
+    h += `<div class="tile" data-act="popup" data-v="sterowanie"><span class="ic" style="background:${winter ? '#4a9fe8' : '#d9a300'}">${winter ? ic.flake : ic.sun}</span><span><small>Sezon</small><b>${winter ? 'zima' : 'lato'}</b></span></div>`;
+    if (faults.length) h += `<div class="tile bad" data-act="more" data-v="${esc(faults[0])}"><span class="ic" style="background:#e5484d">${ic.warn}</span><span><small>Alarm</small><b class="alarm">AWARIA (${faults.length})</b></span></div>`;
+    return h + '</div>';
+  }
+  _popupHtml() {
+    if (!this._popup) return '';
+    const I = this._info(), { E, on, auto, bypassSw, winter, sv, wr, modes, cur } = I;
+    const tab = this._popup === 'energia' ? 'energia' : 'sterowanie';
+    const f1 = (v, d = 1) => isFinite(v) ? v.toFixed(d) : '–';
+    let b = '';
+    if (tab === 'sterowanie') {
+      const tg = (lab, act, key, cc) => `<div class="tg${act ? ' on' : ''}" style="${act ? 'border-color:' + cc : ''}" data-act="toggle" data-v="${key}"><i style="${act ? 'background:' + cc : ''}"></i>${lab}</div>`;
+      const vv = isFinite(sv) ? Math.max(0, Math.min(100, sv)) : 0;
+      b += `<div class="g2">${tg('ON / OFF', on, 'on_off', '#43b04a')}${tg('AUTO', auto, 'mode', '#2f80ed')}${tg('BYPASS', bypassSw, 'bypass', '#1fa97a')}<div class="seg"><span class="${winter ? '' : 'on'}" data-act="season" data-v="lato">LATO</span><span class="${winter ? 'on' : ''}" data-act="season" data-v="zima">ZIMA</span></div></div>`;
+      b += `<div class="lb"><span>INTENSYWNOŚĆ RĘCZNA${auto && wr ? ' (AUTO)' : (!wr ? ' (tylko odczyt)' : '')}</span><b><span id="sl-val">${isFinite(sv) ? Math.round(vv) : '–'}</span><small> %</small></b></div>`;
+      b += `<input type="range" min="0" max="100" step="1" value="${vv}"${wr ? '' : ' disabled'}>`;
+      b += `<div class="lb"><span>TRYB SPECJALNY</span></div><div class="md">${modes.map((m, i) => `<div class="${cur === m ? 'on' : ''}" data-act="mode" data-v="${i}">${esc(m.name)}</div>`).join('')}</div>`;
+    } else {
+      const u = k => esc(this._unit(k) || 'kWh');
+      const eff = this._num('efficiency'), pw = this._num('recovered_power'), pwr = this._num('power'), fpx = this._st('fpx_mode');
+      const fpxOn = fpx && isFinite(parseFloat(fpx.state)) && parseFloat(fpx.state) !== 0;
+      const big = v => isFinite(v) ? (v >= 1000 ? Math.round(v).toLocaleString('pl-PL') : v.toFixed(v >= 100 ? 0 : 1)) : '–';
+      const cell = (lab, val, unit, id) => `<div data-act="more" data-v="${esc(id || '')}"><small>${lab}</small><b>${val}<span> ${unit}</span></b></div>`;
+      b += `<div class="st">${cell('SPRAWNOŚĆ', f1(eff), '%', E.efficiency)}${cell('MOC ODZYSKU', isFinite(pw) ? Math.round(pw) : '–', esc(this._unit('recovered_power') || 'W'), E.recovered_power)}${cell('POBÓR MOCY', isFinite(pwr) ? Math.round(pwr) : '–', esc(this._unit('power') || 'W'), E.power)}${cell('NAGRZEWNICA', fpx ? (fpxOn ? 'aktywna' : 'wył.') : '–', '', E.fpx_mode)}`;
+      b += [['GODZINA', 'energy_hour'], ['DZIEŃ', 'energy_day'], ['MIESIĄC', 'energy_month'], ['ROK', 'energy_year']].map(([lab, k]) => cell('ODZYSK – ' + lab, big(this._num(k)), u(k), E[k])).join('') + '</div>';
+    }
+    return `<div class="ov" data-act="close"><div class="pn"><div class="hd"><h2>Rekuperator</h2><span class="x" data-act="close">×</span></div><div class="tabs"><span class="${tab === 'sterowanie' ? 'on' : ''}" data-act="tab" data-v="sterowanie">Sterowanie</span><span class="${tab === 'energia' ? 'on' : ''}" data-act="tab" data-v="energia">Energia</span></div>${b}</div></div>`;
   }
   _svg(t, dark) {
     const c = this._cfg, E = c.entities;
@@ -314,7 +388,7 @@ ${bypassOpen ? `<mask id="em" maskUnits="userSpaceOnUse" x="-100" y="100" width=
     const eff = this._num('efficiency'), pw = this._num('recovered_power'), pu = this._unit('recovered_power') || 'W';
     const pwTxt = !isFinite(pw) ? '–' : (pu === 'W' ? (Math.abs(pw) >= 1000 ? (pw / 1000).toFixed(2) + ' kW' : Math.round(pw) + ' W') : f(pw, 1) + ' ' + pu);
     const acc = bypassOpen ? '#0b9b74' : t.on;
-    s += `<g data-act="popup" data-v="odzysk"><circle cx="401.5" cy="355.5" r="52" fill="${t.panel}" stroke="${acc}" stroke-width="3.5"${pan}/>`;
+    s += `<g data-act="popup" data-v="sterowanie"><circle cx="401.5" cy="355.5" r="65" fill="none" stroke="${acc}" stroke-width="3" stroke-dasharray="9 9" opacity=".85"/><circle cx="401.5" cy="355.5" r="65" fill="transparent"/><circle cx="401.5" cy="355.5" r="52" fill="${t.panel}" stroke="${acc}" stroke-width="3.5"${pan}/>`;
     if (bypassOpen) {
       s += `<text x="401.5" y="353" text-anchor="middle" font-size="19" font-weight="700" fill="${t.text}">BYPASS</text><text x="401.5" y="371" text-anchor="middle" font-size="10" font-weight="700" letter-spacing="1" fill="${t.muted}">bez odzysku</text>`;
     } else {
@@ -350,81 +424,9 @@ ${bypassOpen ? `<mask id="em" maskUnits="userSpaceOnUse" x="-100" y="100" width=
     const temp = (x, y, label, v, color, anchor, key) => `<g data-act="more" data-v="${esc(E[key] || '')}"><text x="${x}" y="${y - 12}" text-anchor="${anchor}" font-size="14" font-weight="600" letter-spacing="1.5" fill="${t.muted}">${label}</text><text x="${x}" y="${y + 20}" text-anchor="${anchor}" font-size="30" font-weight="700" fill="${color}">${f(v)}<tspan font-size="17" font-weight="600">°C</tspan></text></g>`;
     s += temp(-30, YT, 'CZERPNIA', T.czerpnia, col(sN, T.czerpnia), 'end', 'temp_czerpnia') + temp(-30, YB, 'WYRZUTNIA', T.wyrzutnia, col(sW, T.wyrzutnia), 'end', 'temp_wyrzutnia');
     s += temp(842, YT, 'WYWIEW', T.wywiew, col(sW, T.wywiew), 'start', 'temp_wywiew') + temp(842, YB, 'NAWIEW', T.nawiew, col(sN, T.nawiew), 'start', 'temp_nawiew');
-    /* chipy boczne */
+    /* FPX – napis w poprzek rury nawiewu (za lewym filtrem) */
     const fpx = this._st('fpx_mode'); const fpxOn = fpx && isFinite(parseFloat(fpx.state)) && parseFloat(fpx.state) !== 0;
-    const pwr = this._num('power');
-    const chip = (x, y, w, lab, val, id) => `<g data-act="more" data-v="${esc(id || '')}"><rect x="${x}" y="${y}" width="${w}" height="54" rx="14" fill="${t.panel}" stroke="${t.pstroke}" stroke-width="1.2"${pan}/><text x="${x + 14}" y="${y + 21}" font-size="9.5" font-weight="700" letter-spacing="1" fill="${t.muted}">${lab}</text><text x="${x + 14}" y="${y + 43}" font-size="17" font-weight="700" fill="${t.text}">${val}</text></g>`;
-    s += chip(-166, 318, 140, 'NAGRZEWNICA', fpx ? (fpxOn ? 'aktywna' : 'wyłączona') : '–', E.fpx_mode);
-    s += chip(840, 318, 136, 'POBÓR MOCY', isFinite(pwr) ? Math.round(pwr) + ' ' + (this._unit('power') || 'W') : '–', E.power);
-    /* dół: odzysk dziś, stan */
-    const faults = (Array.isArray(E.faults) ? E.faults : []).filter(id => { const st = this._hass.states[id]; const v = st && parseFloat(st.state); return isFinite(v) && v !== 0; });
-    const eday = this._num('energy_day');
-    for (const [x, lab, val, id, bad] of [[70, 'ODZYSK DZIŚ', `${isFinite(eday) ? eday.toFixed(1) : '–'} kWh · ${pwTxt}`, E.energy_day, false], [520, 'STAN', faults.length ? 'AWARIA (' + faults.length + ')' : 'Brak awarii', faults[0] || E.faults && E.faults[0], faults.length > 0]]) {
-      s += `<g data-act="more" data-v="${esc(id || '')}"><circle class="${bad ? 'alarm' : ''}" cx="${x + 14}" cy="560" r="5" fill="${bad ? '#e5484d' : t.on}"/><text x="${x + 32}" y="553" font-size="10.5" font-weight="700" letter-spacing="1.2" fill="${t.muted}">${lab}</text><text x="${x + 32}" y="573" font-size="16" font-weight="700" fill="${bad ? '#e5484d' : t.text}">${esc(val)}</text></g>`;
-    }
-    /* przyciski */
-    const bx0 = -90, bw = 235, gap = 14, by = 640, bh = 58;
-    const auto = this._on('mode'), bypassSw = this._on('bypass'), winter = this._on('winter');
-    const items = [['ON / OFF', on ? 'włączony' : 'wyłączony', on, t.ok, 'on_off'], ['AUTO', auto ? 'tryb automatyczny' : 'tryb ręczny', auto, t.on, 'mode'], ['BYPASS', bypassSw ? 'włączony' : 'wyłączony', bypassSw, '#36d6a0', 'bypass']];
-    items.forEach(([lab, st, act, cc, key], i) => {
-      const x = bx0 + i * (bw + gap);
-      s += `<g data-act="toggle" data-v="${key}"><rect x="${x}" y="${by}" width="${bw}" height="${bh}" rx="18" fill="${t.panel}" stroke="${act ? cc : t.pstroke}" stroke-width="${act ? 2 : 1.2}"${pan}/>`;
-      s += `<circle cx="${x + 30}" cy="${by + 29}" r="12" fill="${act ? cc : 'none'}" stroke="${act ? cc : t.muted}" stroke-width="2" opacity="${act ? 1 : .7}"/>`;
-      s += `<text x="${x + 54}" y="${by + 26}" font-size="15" font-weight="700" letter-spacing=".8" fill="${t.text}">${lab}</text><text x="${x + 54}" y="${by + 45}" font-size="12" fill="${t.muted}">${st}</text></g>`;
-    });
-    { // LATO | ZIMA
-      const x = bx0 + 3 * (bw + gap), half = bw / 2;
-      s += `<rect x="${x}" y="${by}" width="${bw}" height="${bh}" rx="18" fill="${t.panel}" stroke="${t.pstroke}" stroke-width="1.2"${pan}/>`;
-      s += `<rect x="${winter ? x + half : x + 4}" y="${by + 4}" width="${half - 4}" height="${bh - 8}" rx="14" fill="${t.on}"/>`;
-      const lc = winter ? t.muted : '#fff', zc = winter ? '#fff' : t.muted;
-      const sun = (cx, cy, c2) => `<circle cx="${cx}" cy="${cy}" r="5" fill="${c2}"/>` + [0, 45, 90, 135, 180, 225, 270, 315].map(a => `<path d="M0 -10V-14" transform="translate(${cx},${cy}) rotate(${a})" stroke="${c2}" stroke-width="2" stroke-linecap="round"/>`).join('');
-      const flake = (cx, cy, c2) => [0, 60, 120].map(a => `<path d="M0 -12V12" transform="translate(${cx},${cy}) rotate(${a})" stroke="${c2}" stroke-width="2" stroke-linecap="round"/>`).join('');
-      s += `<g data-act="season" data-v="lato"><rect x="${x}" y="${by}" width="${half}" height="${bh}" fill="transparent"/>${sun(x + 34, by + 29, lc)}<text x="${x + 58}" y="${by + 34}" font-size="14" font-weight="700" letter-spacing=".8" fill="${lc}">LATO</text></g>`;
-      s += `<g data-act="season" data-v="zima"><rect x="${x + half}" y="${by}" width="${half}" height="${bh}" fill="transparent"/>${flake(x + half + 28, by + 29, zc)}<text x="${x + half + 50}" y="${by + 34}" font-size="14" font-weight="700" letter-spacing=".8" fill="${zc}">ZIMA</text></g>`;
-    }
-    /* suwak intensywności ręcznej */
-    const sv = this._num('manual_speed'), vv = isFinite(sv) ? Math.max(0, Math.min(100, sv)) : 0, wr = this._speedWritable(), dis = auto && wr || !wr;
-    const sc = dis ? t.muted : t.on;
-    s += `<text x="${SX}" y="728" font-size="12" font-weight="700" letter-spacing="1.4" fill="${t.muted}">INTENSYWNOŚĆ RĘCZNA${auto && wr ? ' (nieaktywna w AUTO)' : (!wr ? ' (tylko odczyt)' : '')}</text>`;
-    s += `<text id="sl-val" x="${SX + SW}" y="730" text-anchor="end" font-size="22" font-weight="700" fill="${dis ? t.muted : t.text}">${isFinite(sv) ? Math.round(vv) : '–'}<tspan font-size="13"> %</tspan></text>`;
-    s += `<g data-act="slider"><rect x="${SX - 10}" y="738" width="${SW + 20}" height="44" fill="transparent"/><rect x="${SX}" y="752" width="${SW}" height="10" rx="5" fill="${t.pstroke}"/>`;
-    s += `<rect id="sl-fill" x="${SX}" y="752" width="${SW * vv / 100}" height="10" rx="5" fill="${sc}" opacity="${dis ? .5 : 1}"/>`;
-    for (let k = 0; k <= 10; k++) s += `<path d="M${SX + SW * k / 10} 770V775" stroke="${t.muted}" stroke-width="1" opacity=".6"/>`;
-    s += `<circle id="sl-knob" cx="${SX + SW * vv / 100}" cy="757" r="17" fill="${t.panel}" stroke="${sc}" stroke-width="3"/></g>`;
-    /* przycisk trybu specjalnego */
-    const modes = c.special_modes, sm = this._st('special_mode');
-    const cur = modes.find(m => m.value !== undefined && sm && String(m.value) === String(parseFloat(sm.state)) ) || modes.find(m => m.value !== undefined && sm && String(m.value) === sm.state);
-    { const x = 598, y = 722, w = 294, h = 56;
-      s += `<g data-act="popup" data-v="tryby"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" fill="${t.panel}" stroke="${t.on}" stroke-width="1.6"${pan}/>`;
-      s += `<path d="M${x + 30} ${y + 16} l4 9 l9 4 l-9 4 l-4 9 l-4 -9 l-9 -4 l9 -4 z" fill="${t.on}"/>`;
-      s += `<text x="${x + 58}" y="${y + 24}" font-size="10.5" font-weight="700" letter-spacing="1.2" fill="${t.muted}">TRYB SPECJALNY</text><text x="${x + 58}" y="${y + 45}" font-size="17" font-weight="700" fill="${t.text}">${esc(cur ? cur.name : (sm ? sm.state : '–'))}</text>`;
-      s += `<path d="M${x + w - 34} ${y + 33} l8 -8 l8 8" fill="none" stroke="${t.muted}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>`; }
-    /* popupy */
-    if (this._popup === 'odzysk') {
-      const x = 150, y = 205, w = 504, h = 300;
-      s += `<g><rect data-act="close" x="${X0}" y="${Y0}" width="${W}" height="${H}" fill="#000" opacity=".5"/>`;
-      s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="24" fill="${t.panel}" stroke="${t.pstroke}" filter="url(#sh)"/>`;
-      s += `<text x="${x + 28}" y="${y + 44}" font-size="20" font-weight="700" fill="${t.text}">Odzysk energii</text>`;
-      s += `<text x="${x + 28}" y="${y + 66}" font-size="13" fill="${t.muted}">sprawność ${isFinite(eff) ? eff.toFixed(1) : '–'} % · moc odzysku ${pwTxt} · bypass ${bypassOpen ? 'otwarty' : 'zamknięty'}</text>`;
-      s += `<g data-act="close"><rect x="${x + w - 56}" y="${y + 14}" width="40" height="40" fill="transparent"/><path d="M${x + w - 44} ${y + 28} l14 14 m0 -14 l-14 14" stroke="${t.muted}" stroke-width="2.4" stroke-linecap="round"/></g>`;
-      [['GODZINA', 'energy_hour'], ['DZIEŃ', 'energy_day'], ['MIESIĄC', 'energy_month'], ['ROK', 'energy_year']].forEach(([lab, k], i) => {
-        const tx = x + 28 + (i % 2) * 232, ty = y + 92 + Math.floor(i / 2) * 96, v = this._num(k), u = this._unit(k) || 'kWh';
-        s += `<g data-act="more" data-v="${esc(E[k] || '')}"><rect x="${tx}" y="${ty}" width="216" height="82" rx="16" fill="${t.bg2}" stroke="${t.pstroke}"/><text x="${tx + 18}" y="${ty + 28}" font-size="11" font-weight="700" letter-spacing="1.3" fill="${t.muted}">${lab}</text>`;
-        s += `<text x="${tx + 18}" y="${ty + 62}" font-size="30" font-weight="700" fill="${t.text}">${isFinite(v) ? (v >= 1000 ? Math.round(v).toLocaleString('pl-PL') : v.toFixed(v >= 100 ? 0 : 1)) : '–'}<tspan font-size="15" fill="${t.muted}"> ${esc(u)}</tspan></text></g>`;
-      });
-      s += '</g>';
-    }
-    if (this._popup === 'tryby') {
-      const rows = Math.ceil(modes.length / 3), w = 404, h = 62 + rows * 55, x = 488, y = 722 - 14 - h;
-      s += `<g><rect data-act="close" x="${X0}" y="${Y0}" width="${W}" height="${H}" fill="#000" opacity=".25"/>`;
-      s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20" fill="${t.panel}" stroke="${t.pstroke}" filter="url(#sh)"/>`;
-      s += `<text x="${x + 22}" y="${y + 32}" font-size="16" font-weight="700" fill="${t.text}">Tryb specjalny</text><text x="${x + w - 22}" y="${y + 32}" text-anchor="end" font-size="11.5" fill="${t.muted}">dotknij, aby włączyć</text>`;
-      modes.forEach((m, i) => {
-        const bx = x + 22 + (i % 3) * 123, byy = y + 50 + Math.floor(i / 3) * 55, a = cur === m;
-        s += `<g data-act="mode" data-v="${i}"><rect x="${bx}" y="${byy}" width="114" height="46" rx="13" fill="${a ? t.on : t.bg2}" stroke="${a ? t.on : t.pstroke}"/><text x="${bx + 57}" y="${byy + 28}" text-anchor="middle" font-size="13.5" font-weight="700" fill="${a ? '#fff' : t.text}">${esc(m.name)}</text></g>`;
-      });
-      s += '</g>';
-    }
+    if (fpx) s += `<g data-act="more" data-v="${esc(E.fpx_mode || '')}"><text transform="translate(215.4,235.2) rotate(-66.6)" text-anchor="middle" dominant-baseline="central" font-size="38" font-weight="800" letter-spacing="3" fill="${fpxOn ? '#e8651a' : '#ffffff'}" fill-opacity="${fpxOn ? 1 : (dark ? .3 : .42)}"${fpxOn ? ' stroke="#ffffff" stroke-width="1.4" paint-order="stroke"' : ''}>FPX</text></g>`;
     const k = (this._cfg.font_scale > 0 ? this._cfg.font_scale : 1.2);
     return (s + '</svg>').replace(/font-size="([\d.]+)"/g, (m, v) => `font-size="${(parseFloat(v) < 13 ? parseFloat(v) * k : parseFloat(v)).toFixed(1)}"`);
   }

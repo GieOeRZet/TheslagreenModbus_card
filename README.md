@@ -5,7 +5,8 @@ Karta Lovelace dla rekuperatora **Thessla Green AirPack4h** (integracja Modbus).
 - Dwie rury (nawiew i wywiew), każda z własnym gradientem prowadzonym wzdłuż rury od wlotu do wylotu.
 - Skala temperatura → kolor konfigurowalna osobno dla nawiewu i wywiewu (presety `turbo`, `hrv` albo własne przystanki).
 - Bypass: gdy siłownik jest włączony, powietrze idzie bypassem w kolorze wlotu, a odcinek przez wymiennik jest nieaktywny.
-- Popupy: „Odzysk energii” (godzina / dzień / miesiąc / rok) i „Tryb specjalny”.
+- Na karcie tylko schemat i pasek stanu (TRYB, SEZON, alarm gdy jest awaria). Napis **FPX** na rurze nawiewu świeci na pomarańczowo, gdy nagrzewnica pracuje.
+- Dotknięcie środkowego kółka (sprawność) otwiera popup z zakładkami **Sterowanie** (ON/OFF, AUTO, BYPASS, LATO/ZIMA, intensywność, tryby specjalne) i **Energia** (sprawność, moc odzysku, pobór mocy, odzysk godzina / dzień / miesiąc / rok).
 - Zdjęcie rekuperatora (jasne i ciemne) z automatycznym powrotem do wersji wektorowej, gdy plików brak.
 - Edytor wizualny (motyw, kolory temperatur, encje, tryby specjalne).
 
@@ -100,4 +101,4 @@ Intensywność ręczna: suwak działa, gdy `manual_speed` to `number` lub `input
 
 ## Status
 
-Wersja wczesna (0.2.1). Domyślne nazwy encji pochodzą z poprzedniej instalacji i mogą wymagać dopasowania do Twojej integracji.
+Wersja wczesna (0.3.0). Domyślne nazwy encji pochodzą z poprzedniej instalacji i mogą wymagać dopasowania do Twojej integracji.
